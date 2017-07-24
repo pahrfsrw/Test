@@ -11,11 +11,11 @@ public class ByteGame implements Simulation{
 
 	@Override
 	public void run() {
-		try{
+		/*try{
 			Thread.sleep(10);
 		} catch(InterruptedException e){
 			System.out.println("Interrupted.");
-		}
+		}*/
 		byte[] genes = input.getGenes();
 		int ones = 0;
 		for(int i = 0; i < genes.length; i++){
