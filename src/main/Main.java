@@ -5,6 +5,7 @@ import generation.Generation;
 import generation.GenerationFactory;
 import generation.Individual;
 import sim.GenerationSimulator;
+import utils.Stopwatch;
 
 public class Main {
 
@@ -13,6 +14,8 @@ public class Main {
 		Generation newGen = null;
 		GenerationSimulator genSim;
 		int numberOfGenerations = 500;
+		Stopwatch s = new Stopwatch();
+		s.start();
 		for(int i = 0; i < numberOfGenerations; i++){
 			if(i == 0){
 				genSim = new GenerationSimulator(50);
@@ -21,12 +24,13 @@ public class Main {
 				genSim = new GenerationSimulator(newGen);
 			}
 			genSim.run();
-			System.out.println(genSim.getGeneration().getFittest().toString());
+			//System.out.println(genSim.getGeneration().getFittest().toString());
 			TournamentManager tm = TournamentManager.getInstance();
 			newGen = tm.holdTournament(genSim.getGeneration());
 		}
 		genSim = new GenerationSimulator(newGen);
 		genSim.run();
+		s.printElapsedTime();
 		System.out.println(genSim.getGeneration().getFittest().toString());
 	}
 }

@@ -2,6 +2,7 @@ package sim;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import generation.Generation;
 import generation.GenerationFactory;
@@ -13,21 +14,22 @@ public class GenerationSimulator<T extends Individual<T>> implements Runnable, O
 	
 	private int generationSize;
 	private int currentIndividual = 0;
+	private int doneIndividuals = 0;
 	
-	//private final ExecutorService pool;
+	private final ExecutorService pool;
+	private boolean useThreadPooling = true;
 	
 	private Generation<T> gen;
-	private Simulation sim;
 	
 	public GenerationSimulator(int generationSize){
 		this.generationSize = generationSize;
-		//pool = Executors.newCachedThreadPool();
+		pool = Executors.newCachedThreadPool();
 	}
 	
 	public GenerationSimulator(Generation<T> gen){
 		this.gen = gen;
 		this.generationSize = gen.getSize();
-		//pool = Executors.newCachedThreadPool();
+		pool = Executors.newCachedThreadPool();
 	}
 	
 	public void init(){
@@ -40,23 +42,44 @@ public class GenerationSimulator<T extends Individual<T>> implements Runnable, O
 	
 	@Override
 	public void run(){
+		if(useThreadPooling){
+			runThreadPool();
+		} else {
+			runConcurrently();
+		}
+	}
+	
+	private void runThreadPool(){
 		T individual;
 		for(int i = 0; i < generationSize; i++){
-			sim = SimulationFactory.createSim();
-			individual = getNextIndividual();
-			sim.setInput(individual);
-			sim.run();
-			Object output = sim.getOutput();
-			individual.setAttributes(output);
-			
-			sim = null;
-			individual = null;
+			individual = this.getNextIndividual();
+			InstanceSimulator<T> is = new InstanceSimulator<T>(individual);
+			pool.execute(is);
+		}
+		pool.shutdown();
+		try{
+			pool.awaitTermination(600, TimeUnit.SECONDS);
+		} catch(InterruptedException e){
+			System.out.println("Interrupted.");
+		}
+	}
+	
+	/* NOT recommended unless running very simple games. This will slow complex games WAY down. */
+	private void runConcurrently(){
+		T individual;
+		for(int i = 0; i < generationSize; i++){
+			individual = this.getNextIndividual();
+			InstanceSimulator<T> is = new InstanceSimulator<T>(individual);
+			is.run();
 		}
 	}
 
 	@Override
-	public void handleNotification(Observable observable) {
-		// TODO Auto-generated method stub
+	public synchronized void handleNotification(Observable observable) {
+		this.doneIndividuals++;
+		if(this.doneIndividuals == this.generationSize){
+			notify();
+		}
 		
 	}
 	
