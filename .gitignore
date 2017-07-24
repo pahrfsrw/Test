@@ -1,0 +1,13 @@
+# Java class files
+*.class
+
+# Generated files
+bin/
+
+# Log Files
+*.log
+
+# Eclipse files
+.settings/
+.classpath
+.project
