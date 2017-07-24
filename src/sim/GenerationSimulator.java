@@ -16,20 +16,22 @@ public class GenerationSimulator<T extends Individual<T>> implements Runnable, O
 	private int currentIndividual = 0;
 	private int doneIndividuals = 0;
 	
-	private final ExecutorService pool;
+	private static ExecutorService pool = Executors.newCachedThreadPool();
+	
+	//private final ExecutorService poolTest;
 	private boolean useThreadPooling = true;
 	
 	private Generation<T> gen;
 	
 	public GenerationSimulator(int generationSize){
 		this.generationSize = generationSize;
-		pool = Executors.newCachedThreadPool();
+		//poolTest = Executors.newCachedThreadPool();
 	}
 	
 	public GenerationSimulator(Generation<T> gen){
 		this.gen = gen;
 		this.generationSize = gen.getSize();
-		pool = Executors.newCachedThreadPool();
+		//poolTest = Executors.newCachedThreadPool();
 	}
 	
 	public void init(){
@@ -49,16 +51,18 @@ public class GenerationSimulator<T extends Individual<T>> implements Runnable, O
 		}
 	}
 	
-	private void runThreadPool(){
+	private synchronized void runThreadPool(){
 		T individual;
 		for(int i = 0; i < generationSize; i++){
 			individual = this.getNextIndividual();
 			InstanceSimulator<T> is = new InstanceSimulator<T>(individual);
+			is.addObserver(this);
 			pool.execute(is);
 		}
-		pool.shutdown();
+		//pool.shutdown(); // ONLY IF creating a new pool every generation!
 		try{
-			pool.awaitTermination(600, TimeUnit.SECONDS);
+			//pool.awaitTermination(600, TimeUnit.SECONDS);
+			this.wait();
 		} catch(InterruptedException e){
 			System.out.println("Interrupted.");
 		}
@@ -78,7 +82,7 @@ public class GenerationSimulator<T extends Individual<T>> implements Runnable, O
 	public synchronized void handleNotification(Observable observable) {
 		this.doneIndividuals++;
 		if(this.doneIndividuals == this.generationSize){
-			notify();
+			this.notify();
 		}
 		
 	}

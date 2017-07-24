@@ -24,6 +24,8 @@ public class InstanceSimulator<T extends Individual<T>> implements Runnable, Obs
 		Object output = sim.getOutput();
 		individual.setAttributes(output);
 		
+		this.notifyObservers();
+		
 		this.tearDown();
 	}
 	
@@ -41,7 +43,7 @@ public class InstanceSimulator<T extends Individual<T>> implements Runnable, Obs
 	@Override
 	public void notifyObservers() {
 		for(int i = 0; i < this.observers.size(); i++){
-			this.observers.get(i).notify();
+			this.observers.get(i).handleNotification(this);
 		}
 	}
 

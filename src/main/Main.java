@@ -25,7 +25,7 @@ public class Main {
 			}
 			genSim.run();
 			//System.out.println(genSim.getGeneration().getFittest().toString());
-			TournamentManager tm = TournamentManager.getInstance();
+			TournamentManager tm = new TournamentManager();
 			newGen = tm.holdTournament(genSim.getGeneration());
 		}
 		genSim = new GenerationSimulator(newGen);
