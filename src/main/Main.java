@@ -15,6 +15,7 @@ public class Main {
 		GenerationSimulator genSim;
 		int numberOfGenerations = 500;
 		Stopwatch s = new Stopwatch();
+		s.autoPrint(5000);
 		s.start();
 		for(int i = 0; i < numberOfGenerations; i++){
 			if(i == 0){
@@ -30,7 +31,10 @@ public class Main {
 		}
 		genSim = new GenerationSimulator(newGen);
 		genSim.run();
+		GenerationSimulator.shutdownThreadPool();
+		TournamentManager.shutdownThreadPool();
 		s.printElapsedTime();
 		System.out.println(genSim.getGeneration().getFittest().toString());
+		s.stopAutoPrint(false);
 	}
 }

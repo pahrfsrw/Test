@@ -4,80 +4,116 @@ import java.util.ArrayList;
 
 public class Stopwatch implements Runnable{
 	
-	private static int instances = 0;
-	private ArrayList<Thread> threads = new ArrayList<Thread>();
-	private long startTime;
-	private long stopTime;
+	private static ArrayList<Stopwatch> stopwatches = new ArrayList<Stopwatch>();
+	private ArrayList<Long> laps = new ArrayList<Long>();
+	private long intermediateTime;
 	private String name;
 	
-	private boolean running = false;
-	private long interval = 0;
+	private boolean autoPrintRunning = false;
+	private long autoPrintInterval = 0;
+	private Thread autoPrintThread = null;
+	private boolean suppressAutoPrintStopMessages = false;
 	
-	private StopwatchUnits timeUnit;
+	private final double SECONDS_MULT = 0.001; 
+	private final Convert SECONDS = new Convert(this, SECONDS_MULT, "s"); 
+	private final double MINUTES_MULT = 0.001/60;
+	private final Convert MINUTES = new Convert(this, MINUTES_MULT, "m");
+	private final double HOURS_MULT = 0.001/3600;
+	private final Convert HOURS = new Convert(this, HOURS_MULT , "h");
 	
 	public Stopwatch(){
-		Stopwatch.instances++;
-		this.timeUnit = StopwatchUnits.MILLISECONDS;
-		this.name = "Stopwatch_" + Integer.toString(Stopwatch.instances);
+		stopwatches.add(this);
+		this.name = "Stopwatch_" + Integer.toString(stopwatches.size());
 	}
 	
 	public Stopwatch(String stopwatchName){
-		Stopwatch.instances++;
-		this.timeUnit = StopwatchUnits.MILLISECONDS;
-		this.name = stopwatchName;
-	}
-	
-	public Stopwatch(StopwatchUnits timeUnit){
-		Stopwatch.instances++;
-		this.timeUnit = timeUnit;
-		this.name = "Stopwatch" + Integer.toString(Stopwatch.instances);
-	}
-	
-	public Stopwatch(String stopwatchName, StopwatchUnits timeUnit){
-		Stopwatch.instances++;
-		this.timeUnit = timeUnit;
+		stopwatches.add(this);
 		this.name = stopwatchName;
 	}
 	
 	public void start(){
-		this.startTime = System.nanoTime();
+		this.laps.add(System.nanoTime());
 	}
 	
-	public long stop(){
-		this.stopTime = System.nanoTime();
-		return this.stopTime-this.startTime;
+	public long lap(){
+		long temp = System.nanoTime();
+		this.laps.add(temp);
+		return temp-this.laps.get(this.laps.size()-2);
 	}
 	
-	public long startTime(){
-		return this.startTime;
+	public long circuit(){
+		long temp = System.nanoTime();
+		this.laps.add(temp);
+		return temp-this.laps.get(0);
+	}
+	
+	public long lapAverage(){
+		int size = this.laps.size();
+		long temp = this.laps.get(size-1)-this.laps.get(0);
+		long average = (long)Math.round((double)temp/(double)(size-1));
+		return convertToMillis(average);
 	}
 	
 	public long elapsedTime(){
-		return this.convertToUnit(this.timeUnit);
+		return this.convertToMillis(this.getNanoseconds());
 	}
 	
 	public void printElapsedTime(){
-		this.printElapsedTime(this.timeUnit);
-	}
-	
-	public long elapsedTime(StopwatchUnits timeUnit){
-		return this.convertToUnit(timeUnit);
+		System.out.println(this.name + " time (ms): " + Long.toString(this.elapsedTime()));
 	}
 	
 	public void autoPrint(long interval){
-		this.running = true;
-		this.interval = interval;
-		Thread thread = new Thread(this, "Stopwatch thread: " + this.name);
-		this.threads.add(thread);
-		thread.start();
+		if(this.autoPrintRunning){
+			return;
+		}
+		this.autoPrintRunning = true;
+		this.autoPrintInterval = interval;
+		this.autoPrintThread = new Thread(this, "Stopwatch thread: " + this.name);
+		this.autoPrintThread.start();
 	}
 	
-	public void stopAutoPrint(){
-		this.running = false;
+	public void stopAutoPrint(boolean suppressStopMessages){
+		this.suppressAutoPrintStopMessages = suppressStopMessages;
+		this.autoPrintRunning = false;
+		this.autoPrintThread.interrupt();
 	}
 	
-	public void printElapsedTime(StopwatchUnits timeUnit){
-		System.out.println(this.name + " time: " + Long.toString(this.elapsedTime(timeUnit)));
+	public void stopAllAutoPrints(boolean suppressStopMessages){
+		Stopwatch sw;
+		for(int i = 0; i < stopwatches.size(); i++){
+			sw = stopwatches.get(i);
+			if(sw != null)
+				sw.stopAutoPrint(suppressStopMessages);
+		}
+	}
+	
+	public void run(){
+		while(this.autoPrintRunning){
+			System.out.println(this.name + ", time (ms): " + elapsedTime());
+			try{
+				Thread.sleep(this.autoPrintInterval);
+			} catch (InterruptedException e){
+				if(!this.suppressAutoPrintStopMessages){
+					System.out.println("Auto-print of stopwatch " + this.name + " interrupted.");
+				}
+			}
+		}
+		if(!this.suppressAutoPrintStopMessages){
+			System.out.println("Auto-print of stopwatch " + this.name + " has been stopped.");
+		}
+	}
+	
+	private long convertToMillis(long nanoseconds){
+		return (long) Math.round((double)nanoseconds/1000000.0);
+	}
+	
+	private long getNanoseconds(){
+		this.intermediateTime = System.nanoTime();
+		return this.intermediateTime-this.laps.get(0);
+	}
+	
+	public long getStartTime(){
+		return this.laps.get(0);
 	}
 	
 	public void setName(String name){
@@ -88,57 +124,75 @@ public class Stopwatch implements Runnable{
 		return this.name;
 	}
 	
-	public void setTimeUnit(StopwatchUnits timeUnit){
-		this.timeUnit = timeUnit;
-	}
-	
-	public StopwatchUnits getTimeUnit(){
-		return this.timeUnit;
-	}
-	
-	public void run(){
-		while(this.running){
-			System.out.println(this.name + ", time: " + elapsedTime());
-			try{
-				Thread.sleep(this.interval);
-			} catch (InterruptedException e){
-				System.out.println("Stopwatch " + this.name + " interrupted.");
-			}
-		}
-	}
-	
-	private long convertToUnit(StopwatchUnits timeUnit){
-		switch(timeUnit){
-			case MICROSECONDS:
-				return (long) Math.round((double)this.getNanoseconds()/1000.0);
-			case MILLISECONDS:
-				return (long) Math.round((double)this.getNanoseconds()/1000000.0);
-			case SECONDS:
-				return (long) Math.round((double)this.getNanoseconds()/1000000000.0);
-			case MINUTES:
-				return (long) Math.round((double)this.getNanoseconds()/(1000000000.0*60.0));
-			case HOURS:
-				return (long) Math.round((double)this.getNanoseconds()/(1000000000.0*60.0*60.0));
-			default:
-				return getNanoseconds();
-		}
-	}
-	
-	private long getNanoseconds(){
-		this.stopTime = System.nanoTime();
-		return this.stopTime-this.startTime();
-	}
-	
 	public static void main(String[] args){
 		Stopwatch s = new Stopwatch();
 		s.start();
-		s.autoPrint(1000);
+		s.HOURS.autoPrint(1000);
 		try{
-			Thread.sleep(10000);
+			Thread.sleep(5000);
 		} catch(InterruptedException e){
-			System.out.println("Interrupted.");
+			System.out.println("interrupted...");
 		}
-		
+		s.stopAutoPrint(true);
+	}
+	
+	private static class Convert implements Runnable{
+		private final double MULT;
+		private final String NAME;
+		private Stopwatch sw;
+		private Convert(Stopwatch sw, double mult, String name){
+			this.sw = sw;
+			this.MULT = mult;
+			this.NAME = name;
+		}
+		@SuppressWarnings("unused")
+		public double getStartTime(){
+			return (double)sw.getStartTime()*MULT;
+		}
+		@SuppressWarnings("unused")
+		public double circuit(){
+			return (double)sw.circuit()*MULT;
+		}
+		@SuppressWarnings("unused")
+		public double lap(){
+			return (double)sw.lap()*MULT;
+		}
+		@SuppressWarnings("unused")
+		public double lapAverage(){
+			return (double)sw.lapAverage()*MULT;
+		}
+		public double elapsedTime(){
+			return (double)sw.elapsedTime()*MULT;
+		}
+		@SuppressWarnings("unused")
+		public void printElapsedTime(){
+			System.out.println(sw.name + " time (" + this.NAME + "): " + Double.toString(this.elapsedTime()));
+		}
+		@SuppressWarnings("unused")
+		public void autoPrint(long interval){
+			if(sw.autoPrintRunning){
+				return;
+			}
+			sw.autoPrintRunning = true;
+			sw.autoPrintInterval = interval;
+			sw.autoPrintThread = new Thread(this, "Stopwatch thread: " + sw.name);
+			sw.autoPrintThread.start();
+		}
+		public void run(){
+			while(sw.autoPrintRunning){
+				System.out.println(sw.name + ", time (" + this.NAME + "): " + this.elapsedTime());
+				try{
+					Thread.sleep(sw.autoPrintInterval);
+				} catch (InterruptedException e){
+					if(!sw.suppressAutoPrintStopMessages){
+						System.out.println("Auto-print of stopwatch " + sw.name + " interrupted.");
+					}
+				}
+			}
+			if(!sw.suppressAutoPrintStopMessages){
+				System.out.println("Auto-print of stopwatch " + sw.name + " has been stopped.");
+			}
+		}
 	}
 	
 

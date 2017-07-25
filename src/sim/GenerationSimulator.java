@@ -18,7 +18,7 @@ public class GenerationSimulator<T extends Individual<T>> implements Runnable, O
 	
 	private static ExecutorService pool = Executors.newCachedThreadPool();
 	
-	private boolean useThreadPooling = true;
+	private boolean useThreadPooling = false;
 	
 	private Generation<T> gen;
 	
@@ -87,6 +87,10 @@ public class GenerationSimulator<T extends Individual<T>> implements Runnable, O
 			return null;
 		}
 		return gen.getIndividual(currentIndividual++);
+	}
+	
+	public static void shutdownThreadPool(){
+		pool.shutdown();
 	}
 	
 }

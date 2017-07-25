@@ -17,6 +17,7 @@ public class TournamentManager implements Observer {
 	
 	private boolean useThreadPooling = false;
 	private static final ExecutorService pool = Executors.newCachedThreadPool();
+	private static final ExecutorService fixedPool = Executors.newFixedThreadPool(2);
 	
 	private int generationSize;
 	private int completedIndividuals;
@@ -58,7 +59,7 @@ public class TournamentManager implements Observer {
 		for(int i = elitismOffset; i < oldGen.getSize(); i++){
 			TournamentSelection<T> ts = new TournamentSelection<T>(oldGen, newGen, tournamentSize);
 			ts.addObserver(this);
-			pool.execute(ts);
+			fixedPool.execute(ts);
 		}
 		
 		try{
@@ -82,6 +83,10 @@ public class TournamentManager implements Observer {
 		if(this.generationSize == completedIndividuals){
 			this.notify();
 		}
+	}
+	
+	public static void shutdownThreadPool(){
+		pool.shutdown();
 	}
 
 }

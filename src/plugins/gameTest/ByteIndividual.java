@@ -8,7 +8,7 @@ public class ByteIndividual implements Individual<ByteIndividual> {
 	 * 
 	 */
 	private static double defaultMutationRate = 0.001;
-	private static int defaultGeneLength = 1000;
+	private static int defaultGeneLength = 10000;
 	private static final long serialVersionUID = 1L;
 	private byte[] genes;
 	private Double attributes;
